@@ -29,7 +29,6 @@
   	<groupId>org.apache.archiva.redback.components</groupId>
   	<artifactId>redback-components</artifactId>
   	<version>2.5-SNAPSHOT</version>
-    	<relativePath>../parent/pom.xml</relativePath>
   </parent>
 
   <description>Utilities component used by Archiva.</description>
