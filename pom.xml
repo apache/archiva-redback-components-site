@@ -17,7 +17,8 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.archiva.redback.components</groupId>
   <artifactId>redback-components-site</artifactId>
@@ -26,29 +27,31 @@
   <name>Apache Archiva Redback Components Site</name>
 
   <parent>
-  	<groupId>org.apache.archiva.redback.components</groupId>
-  	<artifactId>redback-components</artifactId>
-  	<version>2.5-SNAPSHOT</version>
+    <groupId>org.apache.archiva.redback.components</groupId>
+    <artifactId>redback-components</artifactId>
+    <version>2.5-SNAPSHOT</version>
   </parent>
 
   <description>Utilities component used by Archiva.</description>
   <url>${webUrl}/site</url>
 
   <properties>
-    <scmPubCheckoutDirectory>.site-content</scmPubCheckoutDirectory>
-    <scmTryUpdate>true</scmTryUpdate>
+    <scmPubCheckoutDirectory>${basedir}/.site-content</scmPubCheckoutDirectory>
+    <!-- The git repository, where the site content is placed -->
+    <siteRepositoryUrl>scm:git:https://gitbox.apache.org/repos/asf/archiva-web-content-INVALID.git</siteRepositoryUrl>
+    <site.staging.base>${project.basedir}</site.staging.base>
   </properties>
 
   <distributionManagement>
     <site>
       <id>apache.website</id>
-      <url>${siteUrl}/</url>
+      <url>${siteRepositoryUrl}</url>
     </site>
   </distributionManagement>
 
   <modules>
-    <module>../spring-cache</module>
     <module>../expression-evaluator</module>
+    <module>../spring-cache</module>
     <module>../spring-quartz</module>
     <module>../spring-registry</module>
     <module>../spring-taskqueue</module>
@@ -56,39 +59,51 @@
     <module>../spring-utils</module>
     <module>../redback-features</module>
     <module>../modello-plugins</module>
+
   </modules>
   <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-deploy-plugin</artifactId>
+        <artifactId>maven-scm-publish-plugin</artifactId>
         <inherited>false</inherited>
         <configuration>
-          <skip>true</skip>
+          <checkinComment>Apache Redback Components docs for version ${project.version}</checkinComment>
+          <skipDeletedFiles>true</skipDeletedFiles>
+          <content>${project.build.directory}/staging</content>
+          <tryUpdate>true</tryUpdate>
+          <!--
+                    <ignorePathsToDelete>
+                      <path>%regex[^(?!docs/).*$]</path>
+                    </ignorePathsToDelete>
+          -->
         </configuration>
+        <executions>
+          <execution>
+            <id>scm-publish</id>
+            <phase>site-deploy</phase>
+            <goals>
+              <goal>publish-scm</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-scm-publish-plugin</artifactId>
+        <artifactId>maven-site-plugin</artifactId>
         <configuration>
-          <checkinComment>Apache Redback Components site deployment</checkinComment>
-          <tryUpdate>${scmTryUpdate}</tryUpdate>
-          <content>${project.build.directory}/staging</content>
-          <pubScmUrl>${siteUrl}</pubScmUrl>
-          <ignorePathsToDelete>
-            <ignorePathToDelete>expression-evaluator**</ignorePathToDelete>
-            <ignorePathToDelete>modello-plugins**</ignorePathToDelete>
-            <ignorePathToDelete>redback-components**</ignorePathToDelete>
-            <ignorePathToDelete>redback-features**</ignorePathToDelete>
-            <ignorePathToDelete>spring-apacheds**</ignorePathToDelete>
-            <ignorePathToDelete>spring-cache**</ignorePathToDelete>
-            <ignorePathToDelete>spring-jdo2**</ignorePathToDelete>
-            <ignorePathToDelete>spring-quartz**</ignorePathToDelete>
-            <ignorePathToDelete>spring-registry**</ignorePathToDelete>
-            <ignorePathToDelete>spring-taskqueue**</ignorePathToDelete>
-            <ignorePathToDelete>spring-utils**</ignorePathToDelete>
-          </ignorePathsToDelete>
+          <skipDeploy>true</skipDeploy>
+          <stagingDirectory>${site.staging.base}/target/staging/redback/components/</stagingDirectory>
         </configuration>
+        <executions>
+          <execution>
+            <id>attach-descriptor</id>
+            <goals>
+              <goal>attach-descriptor</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -117,4 +132,49 @@
       </plugin>
     </plugins>
   </reporting>
+
+
+  <profiles>
+    <!--
+  This runs a sparse git checkout for the web site content repository that contains only the doc directory.
+  The profile is activated only, if the checkout directory does not exist.
+  The executor runs a shell script.
+  -->
+    <profile>
+      <id>site-checkout</id>
+      <activation>
+        <file>
+          <missing>${scmPubCheckoutDirectory}</missing>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.6.0</version>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>prepare-checkout</id>
+                <phase>pre-site</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>checkoutSite.sh</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>-d</argument>
+                    <argument>${scmPubCheckoutDirectory}</argument>
+                    <argument>${siteRepositoryUrl}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
