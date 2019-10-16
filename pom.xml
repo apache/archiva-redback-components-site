@@ -56,7 +56,6 @@
     <module>../spring-registry</module>
     <module>../spring-taskqueue</module>
     <module>../spring-apacheds</module>
-    <module>../redback-features</module>
   </modules>
   <build>
     <plugins>
